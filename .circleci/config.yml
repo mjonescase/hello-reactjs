@@ -1,0 +1,63 @@
+version: 2.1
+orbs:
+    node: circleci/node@1.16
+
+commands:
+    restore_caches:
+        description: 'Restore node_modules/, src/ and other files'
+        steps:
+            - restore_cache:
+                keys:
+                    - '{{ .Branch}}-{{ .Revision }}'
+            - restore_cache:
+                keys:
+                    - '{{ .Branch }}-{{ checksum "yarn.lock" }}'
+
+jobs:
+    install-dependencies:
+        executor:
+            name: node/default
+        steps:
+            - checkout
+            - restore_cache:
+                keys:
+                    - '{{ .Branch }}-{{ checksum "yarn.lock" }}'
+            - run: yarn
+            - save_cache:
+                key: '{{ .Branch }}-{{ checksum "yarn.lock" }}'
+                paths:
+                    - node_modules
+            - save_cache:
+                key: '{{ .Branch }}-{{ .Revision }}'
+                paths:
+                    - src
+                    - yarn.lock
+                    - package.json
+                    - tsconfig.json
+
+    test:
+        executor:
+            name: node/default
+        steps:
+            - restore_caches
+            - run: yarn test --watchAll=false
+
+    build:
+        executor:
+            name: node/default
+        steps:
+            - restore_caches
+            - run: yarn build
+            - save_cache:
+                key: 'build-{{ .Branch }}-{{ .Revision }}'
+                paths:
+                    - build
+
+workflows:
+    standard-build:
+        jobs:
+            - install-dependencies
+            - test:
+                requires: [install-dependencies]
+            - build:
+                requires: [test]
