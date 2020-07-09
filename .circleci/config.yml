@@ -34,6 +34,7 @@ jobs:
                     - yarn.lock
                     - package.json
                     - tsconfig.json
+                    - public
 
     test:
         executor:
